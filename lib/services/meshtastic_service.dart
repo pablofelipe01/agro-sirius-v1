@@ -405,6 +405,39 @@ class MeshtasticService extends ChangeNotifier {
     return null;
   }
 
+  // ============ RECONECTAR ============
+
+  Future<bool> reconnect() async {
+    if (_connectedDevice == null) return false;
+
+    try {
+      debugPrint('🔄 Reconectando al dispositivo...');
+      _updateStatus(ConnectionStatus.connecting, 'Reconectando...');
+
+      // Desconectar
+      await _packetSubscription?.cancel();
+      await _connectionSubscription?.cancel();
+      await _client?.disconnect();
+
+      // Esperar un momento
+      await Future.delayed(const Duration(seconds: 2));
+
+      // Reconectar
+      final device = _connectedDevice!;
+      final scannedDevice = ScannedDevice(
+        name: _connectedDeviceName ?? 'Dispositivo',
+        address: _connectedDeviceMac ?? '',
+        rawDevice: device,
+      );
+
+      return await connectToDevice(scannedDevice);
+    } catch (e) {
+      debugPrint('❌ Error reconectando: $e');
+      _updateStatus(ConnectionStatus.error, 'Error reconectando');
+      return false;
+    }
+  }
+
   // ============ DESCONEXION ============
 
   Future<void> disconnect({bool clearDevice = false}) async {

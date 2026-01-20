@@ -117,6 +117,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _reconnectDevice() async {
+    final service = Provider.of<MeshtasticService>(context, listen: false);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Reconectando...'),
+        backgroundColor: Colors.blue,
+      ),
+    );
+
+    final success = await service.reconnect();
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(success ? 'Reconectado exitosamente' : 'Error al reconectar'),
+          backgroundColor: success ? Colors.green : Colors.red,
+        ),
+      );
+    }
+  }
+
   Future<void> _changeDevice() async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -384,6 +406,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
+                      onPressed: service.isConnected ? _reconnectDevice : null,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Reconectar Nodo'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Usa esto si el GPS no responde',
+                    style: TextStyle(color: Colors.grey, fontSize: 12),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
                       onPressed: _changeDevice,
                       icon: const Icon(Icons.bluetooth_searching),
                       label: const Text('Cambiar Nodo Local'),
@@ -402,7 +442,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           // Info de version
           Center(
             child: Text(
-              'AgroSirius v1.0.6',
+              'AgroSirius v1.0.7',
               style: TextStyle(color: Colors.grey[500], fontSize: 12),
             ),
           ),
