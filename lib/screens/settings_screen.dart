@@ -402,7 +402,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           // Info de version
           Center(
             child: Text(
-              'AgroSirius v1.0.5',
+              'AgroSirius v1.0.6',
               style: TextStyle(color: Colors.grey[500], fontSize: 12),
             ),
           ),

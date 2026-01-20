@@ -234,8 +234,18 @@ class MeshtasticService extends ChangeNotifier {
 
       // Escuchar paquetes entrantes
       _packetSubscription = _client!.packetStream.listen((packet) {
+        debugPrint('📦 Paquete recibido: isTextMessage=${packet.isTextMessage}');
+        debugPrint('📦 Paquete from: ${packet.from}, to: ${packet.to}');
         if (packet.isTextMessage) {
+          debugPrint('📦 Es mensaje de texto, procesando...');
           _handleIncomingMessage(packet);
+        } else {
+          // Intentar procesar de todas formas si tiene texto
+          final text = packet.textMessage;
+          if (text != null && text.isNotEmpty) {
+            debugPrint('📦 Tiene textMessage aunque isTextMessage=false: $text');
+            _handleIncomingMessage(packet);
+          }
         }
       });
 
@@ -329,13 +339,18 @@ class MeshtasticService extends ChangeNotifier {
   void _handleIncomingMessage(MeshPacketWrapper packet) {
     try {
       final text = packet.textMessage ?? '';
+      debugPrint('📨 Mensaje recibido: "$text"');
+      debugPrint('📨 From: ${packet.from}, To: ${packet.to}');
 
       // Solo procesar respuestas de siembra del Gateway
       if (text.startsWith('SIEMBRA_OK|') || text.startsWith('SIEMBRA_ERROR|')) {
+        debugPrint('✅ Respuesta de siembra detectada, enviando a stream');
         _siembraResponseController.add(text);
+      } else {
+        debugPrint('ℹ️ Mensaje ignorado (no es respuesta de siembra): $text');
       }
     } catch (e) {
-      debugPrint('Error procesando mensaje: $e');
+      debugPrint('❌ Error procesando mensaje: $e');
     }
   }
 
