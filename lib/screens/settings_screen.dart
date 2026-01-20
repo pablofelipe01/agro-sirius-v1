@@ -11,20 +11,65 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   LoraRegion _selectedRegion = LoraRegion.unset;
+  final TextEditingController _gatewayController = TextEditingController();
+  int _currentGatewayId = defaultGatewayNodeId;
   bool _isApplying = false;
 
   @override
   void initState() {
     super.initState();
-    _loadSavedRegion();
+    _loadSavedSettings();
   }
 
-  Future<void> _loadSavedRegion() async {
+  @override
+  void dispose() {
+    _gatewayController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadSavedSettings() async {
     final service = Provider.of<MeshtasticService>(context, listen: false);
     final savedRegion = await service.getSavedLoraRegion();
+    final savedGateway = await service.getSavedGatewayNodeId();
     setState(() {
       _selectedRegion = savedRegion;
+      _currentGatewayId = savedGateway;
+      _gatewayController.text = MeshtasticService.formatNodeId(savedGateway);
     });
+  }
+
+  Future<void> _saveGatewayId() async {
+    final input = _gatewayController.text.trim();
+    final nodeId = MeshtasticService.parseNodeId(input);
+
+    if (nodeId == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('ID de nodo invalido. Usa formato !xxxxxxxx'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    final service = Provider.of<MeshtasticService>(context, listen: false);
+    await service.saveGatewayNodeId(nodeId);
+
+    setState(() {
+      _currentGatewayId = nodeId;
+      _gatewayController.text = MeshtasticService.formatNodeId(nodeId);
+    });
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gateway configurado: ${MeshtasticService.formatNodeId(nodeId)}'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
   }
 
   Future<void> _applyConfiguration() async {
@@ -97,7 +142,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await service.disconnect(clearDevice: true);
 
       if (mounted) {
-        // Navegar a la pantalla de seleccion de dispositivo
         Navigator.of(context).pushNamedAndRemoveUntil('/select-device', (route) => false);
       }
     }
@@ -112,7 +156,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Seccion: Informacion del Nodo
+          // Seccion: Informacion del Nodo Local
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -129,7 +173,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        'Dispositivo Conectado',
+                        'Dispositivo Local',
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.bold,
                             ),
@@ -154,6 +198,86 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         foregroundColor: Colors.red,
                       ),
                     ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Seccion: Gateway Destino (NUEVA)
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.router, color: Colors.purple),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Gateway Destino',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                    ],
+                  ),
+                  const Divider(),
+                  const Text(
+                    'Las siembras se enviaran a este nodo (Mission Pack)',
+                    style: TextStyle(color: Colors.grey, fontSize: 12),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _gatewayController,
+                          decoration: const InputDecoration(
+                            border: OutlineInputBorder(),
+                            labelText: 'ID del Gateway',
+                            hintText: '!9ea29bc4',
+                            prefixIcon: Icon(Icons.tag),
+                          ),
+                          style: const TextStyle(fontFamily: 'monospace'),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: _saveGatewayId,
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                        ),
+                        child: const Icon(Icons.save),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.purple[50],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.purple[200]!),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline, size: 16, color: Colors.purple[700]),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Actual: ${MeshtasticService.formatNodeId(_currentGatewayId)}',
+                            style: TextStyle(
+                              fontFamily: 'monospace',
+                              color: Colors.purple[700],
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -262,7 +386,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     child: ElevatedButton.icon(
                       onPressed: _changeDevice,
                       icon: const Icon(Icons.bluetooth_searching),
-                      label: const Text('Cambiar Nodo'),
+                      label: const Text('Cambiar Nodo Local'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.orange,
                         foregroundColor: Colors.white,
@@ -278,7 +402,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           // Info de version
           Center(
             child: Text(
-              'AgroSirius v1.0.2',
+              'AgroSirius v1.0.5',
               style: TextStyle(color: Colors.grey[500], fontSize: 12),
             ),
           ),

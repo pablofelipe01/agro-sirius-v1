@@ -68,6 +68,10 @@ enum LoraRegion {
 const String _savedDeviceAddressKey = 'saved_device_address';
 const String _savedDeviceNameKey = 'saved_device_name';
 const String _loraRegionKey = 'lora_region';
+const String _gatewayNodeIdKey = 'gateway_node_id';
+
+// ID del Gateway por defecto (Mission Pack)
+const int defaultGatewayNodeId = 0x9ea29bc4;
 
 class MeshtasticService extends ChangeNotifier {
   MeshtasticClient? _client;
@@ -133,6 +137,35 @@ class MeshtasticService extends ChangeNotifier {
   Future<void> saveLoraRegion(LoraRegion region) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_loraRegionKey, region.code);
+  }
+
+  Future<int> getSavedGatewayNodeId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_gatewayNodeIdKey) ?? defaultGatewayNodeId;
+  }
+
+  Future<void> saveGatewayNodeId(int nodeId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_gatewayNodeIdKey, nodeId);
+  }
+
+  // Convertir string hex (!9ea29bc4) a int
+  static int? parseNodeId(String input) {
+    String cleaned = input.trim().toLowerCase();
+    // Remover prefijo ! si existe
+    if (cleaned.startsWith('!')) {
+      cleaned = cleaned.substring(1);
+    }
+    // Remover prefijo 0x si existe
+    if (cleaned.startsWith('0x')) {
+      cleaned = cleaned.substring(2);
+    }
+    return int.tryParse(cleaned, radix: 16);
+  }
+
+  // Convertir int a string hex con formato !xxxxxxxx
+  static String formatNodeId(int nodeId) {
+    return '!${nodeId.toRadixString(16).padLeft(8, '0')}';
   }
 
   // ============ ESCANEO DE DISPOSITIVOS ============
@@ -316,12 +349,17 @@ class MeshtasticService extends ChangeNotifier {
         throw Exception('Mensaje de siembra muy largo');
       }
 
+      // Obtener el ID del Gateway destino
+      final gatewayNodeId = await getSavedGatewayNodeId();
+
+      // Enviar al Gateway especifico (no broadcast)
       await _client!.sendTextMessage(
         siembraMessage,
+        destinationId: gatewayNodeId,
         channel: 0,
       );
 
-      debugPrint('Siembra enviada: $siembraMessage');
+      debugPrint('Siembra enviada a ${formatNodeId(gatewayNodeId)}: $siembraMessage');
       return true;
     } catch (e) {
       debugPrint('Error enviando siembra: $e');
