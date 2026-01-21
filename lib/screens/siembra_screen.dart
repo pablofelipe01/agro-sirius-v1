@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -45,6 +46,10 @@ class _SiembraScreenState extends State<SiembraScreen> {
 
   Siembra? _ultimaSiembra;
   bool _enviando = false;
+  bool _timeout = false;
+  Timer? _timeoutTimer;
+
+  static const int _timeoutSeconds = 30;
 
   @override
   void initState() {
@@ -57,9 +62,11 @@ class _SiembraScreenState extends State<SiembraScreen> {
         final siembraConfirmada =
             Siembra.fromGatewayResponse(response, _ultimaSiembra!);
         if (siembraConfirmada != null) {
+          _cancelTimeout();
           setState(() {
             _ultimaSiembra = siembraConfirmada;
             _enviando = false;
+            _timeout = false;
           });
 
           if (mounted) {
@@ -75,9 +82,26 @@ class _SiembraScreenState extends State<SiembraScreen> {
     });
   }
 
+  void _startTimeout() {
+    _cancelTimeout();
+    _timeoutTimer = Timer(Duration(seconds: _timeoutSeconds), () {
+      if (mounted && _enviando) {
+        setState(() {
+          _timeout = true;
+        });
+      }
+    });
+  }
+
+  void _cancelTimeout() {
+    _timeoutTimer?.cancel();
+    _timeoutTimer = null;
+  }
+
   Future<void> _registrarSiembra() async {
     setState(() {
       _enviando = true;
+      _timeout = false;
     });
 
     final service = Provider.of<MeshtasticService>(context, listen: false);
@@ -107,6 +131,7 @@ class _SiembraScreenState extends State<SiembraScreen> {
       setState(() {
         _ultimaSiembra = siembra;
       });
+      _startTimeout();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -132,11 +157,36 @@ class _SiembraScreenState extends State<SiembraScreen> {
     }
   }
 
+  Future<void> _reintentarEnvio() async {
+    if (_ultimaSiembra == null) return;
+
+    setState(() {
+      _timeout = false;
+    });
+    _startTimeout();
+
+    final service = Provider.of<MeshtasticService>(context, listen: false);
+    final enviado = await service.sendSiembra(_ultimaSiembra!.toMeshMessage());
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(enviado
+              ? 'Reintentando envío...'
+              : 'Error al reintentar'),
+          backgroundColor: enviado ? Colors.orange : Colors.red,
+        ),
+      );
+    }
+  }
+
   void _nuevaSiembra() {
+    _cancelTimeout();
     setState(() {
       _ultimaSiembra = null;
       _notasController.clear();
       _enviando = false;
+      _timeout = false;
     });
   }
 
@@ -327,21 +377,87 @@ class _SiembraScreenState extends State<SiembraScreen> {
           ),
           const SizedBox(height: 24),
 
-          // Botón Registrar
-          ElevatedButton.icon(
-            onPressed: _enviando ? null : _registrarSiembra,
-            icon: _enviando
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2))
-                : const Icon(Icons.agriculture),
-            label: Text(_enviando ? 'Enviando...' : 'Registrar Siembra'),
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              textStyle: const TextStyle(fontSize: 18),
+          // Botones segun estado
+          if (_enviando && _timeout) ...[
+            // Estado: Timeout - mostrar opciones
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.orange[50],
+                border: Border.all(color: Colors.orange),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                children: [
+                  const Icon(Icons.warning_amber, color: Colors.orange, size: 40),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'No se recibio confirmacion',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'La red puede estar congestionada',
+                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: _reintentarEnvio,
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Reintentar'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _nuevaSiembra,
+                          icon: const Icon(Icons.add),
+                          label: const Text('Nueva'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
+          ] else if (_enviando && !_timeout) ...[
+            // Estado: Esperando confirmacion
+            ElevatedButton.icon(
+              onPressed: null,
+              icon: const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2)),
+              label: const Text('Esperando confirmacion...'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                textStyle: const TextStyle(fontSize: 18),
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: _nuevaSiembra,
+              child: const Text('Cancelar'),
+            ),
+          ] else ...[
+            // Estado: Listo para registrar
+            ElevatedButton.icon(
+              onPressed: _registrarSiembra,
+              icon: const Icon(Icons.agriculture),
+              label: const Text('Registrar Siembra'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                textStyle: const TextStyle(fontSize: 18),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -349,6 +465,7 @@ class _SiembraScreenState extends State<SiembraScreen> {
 
   @override
   void dispose() {
+    _cancelTimeout();
     _notasController.dispose();
     super.dispose();
   }
