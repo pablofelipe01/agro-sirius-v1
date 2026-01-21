@@ -54,7 +54,6 @@ class SiembraCard extends StatelessWidget {
                     'Cultivo:', '${siembra.cultivo} - ${siembra.variedad}'),
                 _buildInfoRow(
                     'Ubicación:', '${siembra.lote}, ${siembra.sector}'),
-                _buildInfoRow('Hectáreas:', '${siembra.hectareas} ha'),
                 if (siembra.gpsLat != null && siembra.gpsLon != null)
                   _buildInfoRow('GPS:',
                       '${siembra.gpsLat!.toStringAsFixed(4)}, ${siembra.gpsLon!.toStringAsFixed(4)}'),

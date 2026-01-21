@@ -41,7 +41,6 @@ class _SiembraScreenState extends State<SiembraScreen> {
   String _loteSeleccionado = 'Lote 1';
   String _sectorSeleccionado = 'Sector A';
 
-  final TextEditingController _hectareasController = TextEditingController();
   final TextEditingController _notasController = TextEditingController();
 
   Siembra? _ultimaSiembra;
@@ -77,15 +76,6 @@ class _SiembraScreenState extends State<SiembraScreen> {
   }
 
   Future<void> _registrarSiembra() async {
-    // Validar hectáreas
-    final hectareas = double.tryParse(_hectareasController.text);
-    if (hectareas == null || hectareas <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Por favor ingresa hectáreas válidas')),
-      );
-      return;
-    }
-
     setState(() {
       _enviando = true;
     });
@@ -103,7 +93,6 @@ class _SiembraScreenState extends State<SiembraScreen> {
       variedad: _variedadSeleccionada,
       lote: _loteSeleccionado,
       sector: _sectorSeleccionado,
-      hectareas: hectareas,
       gpsLat: gps?['lat'],
       gpsLon: gps?['lon'],
       notas: _notasController.text.trim().isEmpty
@@ -146,7 +135,6 @@ class _SiembraScreenState extends State<SiembraScreen> {
   void _nuevaSiembra() {
     setState(() {
       _ultimaSiembra = null;
-      _hectareasController.clear();
       _notasController.clear();
       _enviando = false;
     });
@@ -280,20 +268,6 @@ class _SiembraScreenState extends State<SiembraScreen> {
           ),
           const SizedBox(height: 16),
 
-          // Hectáreas
-          const Text('Hectáreas',
-              style: TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _hectareasController,
-            decoration: const InputDecoration(
-              border: OutlineInputBorder(),
-              hintText: 'Ej: 2.5',
-            ),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          ),
-          const SizedBox(height: 16),
-
           // GPS Status
           FutureBuilder<Map<String, double>?>(
             future: service.getGPSLocation(),
@@ -375,7 +349,6 @@ class _SiembraScreenState extends State<SiembraScreen> {
 
   @override
   void dispose() {
-    _hectareasController.dispose();
     _notasController.dispose();
     super.dispose();
   }

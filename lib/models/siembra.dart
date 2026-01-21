@@ -7,7 +7,6 @@ class Siembra {
   final String variedad;
   final String lote;
   final String sector;
-  final double hectareas;
   final double? gpsLat;
   final double? gpsLon;
   final String? notas;
@@ -20,14 +19,13 @@ class Siembra {
     required this.variedad,
     required this.lote,
     required this.sector,
-    required this.hectareas,
     this.gpsLat,
     this.gpsLon,
     this.notas,
     this.status = 'pendiente',
   });
 
-  // Generar mensaje mesh en formato: SIEMBRA|fecha|hora|cultivo|variedad|lote|sector|hectareas|gps|notas
+  // Generar mensaje mesh en formato: SIEMBRA|fecha|hora|cultivo|variedad|lote|sector|gps|notas
   String toMeshMessage() {
     final dateStr = DateFormat('yyyy-MM-dd').format(fecha);
     final timeStr = DateFormat('HH:mm').format(fecha);
@@ -36,7 +34,7 @@ class Siembra {
         : 'sin-gps';
     final notasStr = notas?.isNotEmpty == true ? notas! : 'sin-notas';
 
-    return 'SIEMBRA|$dateStr|$timeStr|$cultivo|$variedad|$lote|$sector|$hectareas|$gpsStr|$notasStr';
+    return 'SIEMBRA|$dateStr|$timeStr|$cultivo|$variedad|$lote|$sector|$gpsStr|$notasStr';
   }
 
   // Parsear respuesta del Gateway: SIEMBRA_OK|ID-xxx|mensaje
@@ -53,7 +51,6 @@ class Siembra {
       variedad: original.variedad,
       lote: original.lote,
       sector: original.sector,
-      hectareas: original.hectareas,
       gpsLat: original.gpsLat,
       gpsLon: original.gpsLon,
       notas: original.notas,
