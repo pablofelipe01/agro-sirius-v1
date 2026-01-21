@@ -145,7 +145,7 @@ class _DeviceSelectionScreenState extends State<DeviceSelectionScreen> {
   @override
   void initState() {
     super.initState();
-    _startScanning();
+    // No iniciar escaneo automaticamente - esperar a que el usuario presione el boton
   }
 
   @override
@@ -259,7 +259,9 @@ class _DeviceSelectionScreenState extends State<DeviceSelectionScreen> {
                 Text(
                   _isScanning
                       ? 'Buscando dispositivos Meshtastic...'
-                      : 'Toca un dispositivo para conectar',
+                      : _devices.isNotEmpty
+                          ? 'Toca un dispositivo para conectar'
+                          : 'Presiona el boton para buscar',
                   style: TextStyle(
                     color: _isScanning ? Colors.blue[800] : Colors.grey[700],
                   ),
@@ -276,23 +278,27 @@ class _DeviceSelectionScreenState extends State<DeviceSelectionScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
-                          Icons.bluetooth_disabled,
+                          _isScanning ? Icons.bluetooth_searching : Icons.bluetooth,
                           size: 64,
-                          color: Colors.grey[400],
+                          color: _isScanning ? Colors.blue : Colors.grey[400],
                         ),
                         const SizedBox(height: 16),
                         Text(
                           _isScanning
                               ? 'Buscando dispositivos...'
-                              : 'No se encontraron dispositivos',
+                              : 'Busca tu dispositivo Meshtastic',
                           style: TextStyle(color: Colors.grey[600]),
                         ),
                         if (!_isScanning) ...[
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 24),
                           ElevatedButton.icon(
                             onPressed: _startScanning,
-                            icon: const Icon(Icons.refresh),
-                            label: const Text('Buscar de nuevo'),
+                            icon: const Icon(Icons.bluetooth_searching),
+                            label: const Text('Buscar Dispositivos'),
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                              textStyle: const TextStyle(fontSize: 16),
+                            ),
                           ),
                         ],
                       ],
