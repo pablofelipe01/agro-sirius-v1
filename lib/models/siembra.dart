@@ -25,7 +25,8 @@ class Siembra {
     this.status = 'pendiente',
   });
 
-  // Generar mensaje mesh en formato: SIEMBRA|fecha|hora|cultivo|variedad|lote|sector|gps|notas
+  // Generar mensaje mesh en formato: SIEMBRA|fecha|hora|cultivo|variedad|lote|sector|hectareas|gps|notas
+  // Nota: hectareas se envia como "0" para compatibilidad con Gateway (fincas preconstruidas)
   String toMeshMessage() {
     final dateStr = DateFormat('yyyy-MM-dd').format(fecha);
     final timeStr = DateFormat('HH:mm').format(fecha);
@@ -34,7 +35,7 @@ class Siembra {
         : 'sin-gps';
     final notasStr = notas?.isNotEmpty == true ? notas! : 'sin-notas';
 
-    return 'SIEMBRA|$dateStr|$timeStr|$cultivo|$variedad|$lote|$sector|$gpsStr|$notasStr';
+    return 'SIEMBRA|$dateStr|$timeStr|$cultivo|$variedad|$lote|$sector|0|$gpsStr|$notasStr';
   }
 
   // Parsear respuesta del Gateway: SIEMBRA_OK|ID-xxx|mensaje
