@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../services/meshtastic_service.dart';
+import '../services/siembra_storage.dart';
 import '../models/siembra.dart';
 import '../widgets/siembra_card.dart';
 
@@ -57,12 +58,16 @@ class _SiembraScreenState extends State<SiembraScreen> {
 
     // Escuchar respuestas del Gateway
     final service = Provider.of<MeshtasticService>(context, listen: false);
-    service.siembraResponseStream.listen((response) {
+    service.siembraResponseStream.listen((response) async {
       if (_ultimaSiembra != null) {
         final siembraConfirmada =
             Siembra.fromGatewayResponse(response, _ultimaSiembra!);
         if (siembraConfirmada != null) {
           _cancelTimeout();
+
+          // Guardar en historial local
+          await SiembraStorage.guardarSiembra(siembraConfirmada);
+
           setState(() {
             _ultimaSiembra = siembraConfirmada;
             _enviando = false;

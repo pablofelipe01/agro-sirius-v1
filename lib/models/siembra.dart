@@ -25,6 +25,38 @@ class Siembra {
     this.status = 'pendiente',
   });
 
+  // Serializar a JSON para almacenamiento local
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'fecha': fecha.toIso8601String(),
+      'cultivo': cultivo,
+      'variedad': variedad,
+      'lote': lote,
+      'sector': sector,
+      'gpsLat': gpsLat,
+      'gpsLon': gpsLon,
+      'notas': notas,
+      'status': status,
+    };
+  }
+
+  // Deserializar desde JSON
+  factory Siembra.fromJson(Map<String, dynamic> json) {
+    return Siembra(
+      id: json['id'] as String,
+      fecha: DateTime.parse(json['fecha'] as String),
+      cultivo: json['cultivo'] as String,
+      variedad: json['variedad'] as String,
+      lote: json['lote'] as String,
+      sector: json['sector'] as String,
+      gpsLat: json['gpsLat'] as double?,
+      gpsLon: json['gpsLon'] as double?,
+      notas: json['notas'] as String?,
+      status: json['status'] as String? ?? 'pendiente',
+    );
+  }
+
   // Generar mensaje mesh en formato: SIEMBRA|fecha|hora|cultivo|variedad|lote|sector|hectareas|gps|notas
   // Nota: hectareas se envia como "0" para compatibilidad con Gateway (fincas preconstruidas)
   String toMeshMessage() {
